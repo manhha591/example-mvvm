@@ -1,0 +1,40 @@
+public class NoteRepository {
+
+    private final NoteDao noteDao; // Cơ sở dữ liệu cục bộ
+    private final NoteApiService noteApiService; // API từ xa
+
+    public NoteRepository(NoteDao noteDao, NoteApiService noteApiService) {
+        this.noteDao = noteDao;
+        this.noteApiService = noteApiService;
+    }
+
+    public LiveData<List<Note>> getAllNotes() {
+        // Lấy dữ liệu từ cơ sở dữ liệu
+        // Hoặc nếu cần thiết, đồng bộ hóa dữ liệu với API và cập nhật cơ sở dữ liệu
+        return noteDao.getAllNotes();
+    }
+
+    public Completable insertNote(Note note) {
+        // Chèn dữ liệu vào cơ sở dữ liệu và đồng bộ hóa với API nếu cần
+        return Completable.concatArray(
+                noteDao.insert(note),
+                noteApiService.insertNote(note) // Đồng bộ hóa với API
+        );
+    }
+
+    public Completable updateNote(Note note) {
+        // Cập nhật dữ liệu trong cơ sở dữ liệu và đồng bộ hóa với API nếu cần
+        return Completable.concatArray(
+                noteDao.update(note),
+                noteApiService.updateNote(note) // Đồng bộ hóa với API
+        );
+    }
+
+    public Completable deleteNote(Note note) {
+        // Xóa dữ liệu từ cơ sở dữ liệu và đồng bộ hóa với API nếu cần
+        return Completable.concatArray(
+                noteDao.delete(note),
+                noteApiService.deleteNote(note) // Đồng bộ hóa với API
+        );
+    }
+}

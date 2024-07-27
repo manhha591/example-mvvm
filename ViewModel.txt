@@ -1,0 +1,131 @@
+import android.app.Application;
+import androidx.annotation.NonNull;
+import androidx.lifecycle.AndroidViewModel;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.viewModelScope;
+
+import com.example.note.database.respository.NoteRepository;
+import com.example.note.model.Note;
+
+import java.util.List;
+
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.disposables.CompositeDisposable;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.rxjava3.core.Completable;
+
+public class NoteViewModel extends AndroidViewModel {
+
+    private final NoteRepository noteRepository;
+    private final CompositeDisposable disposables = new CompositeDisposable();
+    private final MutableLiveData<List<Note>> allNotes = new MutableLiveData<>();
+
+    public NoteViewModel(@NonNull Application application) {
+        super(application);
+        // Giả sử bạn đã có sẵn NoteDao và NoteApiService
+        NoteDao noteDao = ... // Khởi tạo NoteDao
+        NoteApiService noteApiService = ... // Khởi tạo NoteApiService
+        noteRepository = new NoteRepository(noteDao, noteApiService);
+        loadAllNotes();
+    }
+
+    public LiveData<List<Note>> getAllNotes() {
+        return allNotes;
+    }
+
+    public void loadAllNotes() {
+        disposables.add(noteRepository.getAllNotes()
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        notes -> allNotes.setValue(notes),
+                        throwable -> {
+                            // Xử lý lỗi nếu có
+                            Log.e("NoteViewModel", "Error loading notes", throwable);
+                        }
+                ));
+    }
+
+    public void insertNote(Note note) {
+        Disposable disposable = noteRepository.insertNote(note)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        () -> {
+                            // Xử lý thành công
+                            loadAllNotes(); // Tải lại danh sách ghi chú
+                        },
+                        throwable -> {
+                            // Xử lý lỗi nếu có
+                            Log.e("NoteViewModel", "Error inserting note", throwable);
+                        }
+                );
+
+        disposables.add(disposable);
+    }
+
+    public void updateNote(Note note) {
+        Disposable disposable = noteRepository.updateNote(note)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        () -> {
+                            // Xử lý thành công
+                            loadAllNotes(); // Tải lại danh sách ghi chú
+                        },
+                        throwable -> {
+                            // Xử lý lỗi nếu có
+                            Log.e("NoteViewModel", "Error updating note", throwable);
+                        }
+                );
+
+        disposables.add(disposable);
+    }
+
+    public void deleteNote(Note note) {
+        Disposable disposable = noteRepository.deleteNote(note)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        () -> {
+                            // Xử lý thành công
+                            loadAllNotes(); // Tải lại danh sách ghi chú
+                        },
+                        throwable -> {
+                            // Xử lý lỗi nếu có
+                            Log.e("NoteViewModel", "Error deleting note", throwable);
+                        }
+                );
+
+        disposables.add(disposable);
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        disposables.clear(); // Dọn dẹp các Disposable khi ViewModel bị hủy
+    }
+
+    // Factory class to create NoteViewModel with NoteRepository
+    public static class NoteViewModelFactory extends ViewModelProvider.NewInstanceFactory {
+
+        private final Application application;
+
+        public NoteViewModelFactory(Application application) {
+            this.application = application;
+        }
+
+        @NonNull
+        @Override
+        public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
+            if (modelClass.isAssignableFrom(NoteViewModel.class)) {
+                return (T) new NoteViewModel(application);
+            }
+            throw new IllegalArgumentException("Unknown ViewModel class");
+        }
+    }
+}

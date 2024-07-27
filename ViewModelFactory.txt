@@ -1,0 +1,20 @@
+public static class NoteViewModelFactory extends ViewModelProvider.NewInstanceFactory {
+    
+    private final NoteRepository noteRepository;
+
+    public NoteViewModelFactory(Context context) {
+        // Ví dụ tạo NoteDao và NoteApiService từ Context
+        NoteDao noteDao = NoteDatabase.getDatabase(context).noteDao();
+        NoteApiService noteApiService = ApiClient.getClient().create(NoteApiService.class);
+        this.noteRepository = new NoteRepository(noteDao, noteApiService);
+    }
+
+    @NonNull
+    @Override
+    public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
+        if (modelClass.isAssignableFrom(NoteViewModel.class)) {
+            return (T) new NoteViewModel(noteRepository);
+        }
+        throw new IllegalArgumentException("Unknown ViewModel class");
+    }
+}
